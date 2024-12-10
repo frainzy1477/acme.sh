@@ -1,13 +1,16 @@
 #!/usr/bin/env sh
-
-#
-#CF_Key="sdfsdfsdfljlbjkljlkjsdfoiwje"
-#
-#CF_Email="xxxx@sss.com"
-
-#CF_Token="xxxx"
-#CF_Account_ID="xxxx"
-#CF_Zone_ID="xxxx"
+# shellcheck disable=SC2034
+dns_cf_info='CloudFlare
+Site: CloudFlare.com
+Docs: github.com/acmesh-official/acme.sh/wiki/dnsapi#dns_cf
+Options:
+ CF_Key API Key
+ CF_Email Your account email
+OptionsAlt:
+ CF_Token API Token
+ CF_Account_ID Account ID
+ CF_Zone_ID Zone ID. Optional.
+'
 
 CF_Api="https://api.cloudflare.com/client/v4"
 
@@ -32,7 +35,8 @@ dns_cf_add() {
     else
       _saveaccountconf_mutable CF_Token "$CF_Token"
       _saveaccountconf_mutable CF_Account_ID "$CF_Account_ID"
-      _saveaccountconf_mutable CF_Zone_ID "$CF_Zone_ID"
+      _clearaccountconf_mutable CF_Zone_ID
+      _clearaccountconf CF_Zone_ID
     fi
   else
     if [ -z "$CF_Key" ] || [ -z "$CF_Email" ]; then
@@ -51,6 +55,14 @@ dns_cf_add() {
     #save the api key and email to the account conf file.
     _saveaccountconf_mutable CF_Key "$CF_Key"
     _saveaccountconf_mutable CF_Email "$CF_Email"
+
+    _clearaccountconf_mutable CF_Token
+    _clearaccountconf_mutable CF_Account_ID
+    _clearaccountconf_mutable CF_Zone_ID
+    _clearaccountconf CF_Token
+    _clearaccountconf CF_Account_ID
+    _clearaccountconf CF_Zone_ID
+
   fi
 
   _debug "First detect the root zone"
@@ -174,7 +186,7 @@ _get_root() {
   fi
 
   while true; do
-    h=$(printf "%s" "$domain" | cut -d . -f $i-100)
+    h=$(printf "%s" "$domain" | cut -d . -f "$i"-100)
     _debug h "$h"
     if [ -z "$h" ]; then
       #not valid
@@ -194,7 +206,7 @@ _get_root() {
     if _contains "$response" "\"name\":\"$h\"" || _contains "$response" '"total_count":1'; then
       _domain_id=$(echo "$response" | _egrep_o "\[.\"id\": *\"[^\"]*\"" | _head_n 1 | cut -d : -f 2 | tr -d \" | tr -d " ")
       if [ "$_domain_id" ]; then
-        _sub_domain=$(printf "%s" "$domain" | cut -d . -f 1-$p)
+        _sub_domain=$(printf "%s" "$domain" | cut -d . -f 1-"$p")
         _domain=$h
         return 0
       fi
